@@ -1,0 +1,13 @@
+streamlit
+pandas
+ydata-profiling
+great_expectations
+presidio-analyzer
+presidio-anonymizer
+langchain
+Faker
+phonenumbers
+openpyxl
+fpdf
+matplotlib
+google-generativeai

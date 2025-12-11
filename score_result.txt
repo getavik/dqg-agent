@@ -1,0 +1,15 @@
+Loading sample data...
+Stage 1: Profiling (Mocking description to save time if needed, but running real one first)
+Profile generated.
+Stage 2: Governance Mapping
+Generated 4 rules.
+ - email: expect_column_values_to_not_be_null
+ - revenue: expect_column_values_to_be_between
+ - email: expect_column_values_to_not_be_null
+ - phone: expect_column_values_to_not_be_null
+Stage 3: Validation
+
+Validation Results:
+Success: False
+Statistics: {'evaluated_expectations': 3, 'successful_expectations': 0, 'unsuccessful_expectations': 3, 'success_percent': 0.0}
+Failures: 3

@@ -1,0 +1,7 @@
+id,name,email,revenue,country,phone
+1,John Doe,john@example.com,1000,US,555-0100
+2,Jane Smith,jane.smith@company.com,2500,USA,555-0101
+3,Bob Jones,, -500,UK,555-0102
+4,Alice Brown,alice@brown,3000,U.S.A.,
+5,Charlie Davis,charlie@example.com,1500,Canada,555-0104
+6,Eve White,eve@white.com,2000,US,TextInPhone

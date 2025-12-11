@@ -1,0 +1,201 @@
+customer_id,name,email,phone,revenue,signup_date,region,loyalty_score
+1,Allison Hill,donaldgarcia@example.net,-911,46158.62,30-07-2025,Europe,29
+2,Jerry Ramirez,blakeerik@example.com,627-767-4426,26609.07,02-11-2023,Europe,4
+3,Daniel Gallagher,daviscolin@example.com,+1-540-378-1618x495,31331.83,01-05-2021,,23
+4,Patricia Galloway,michellejames@example.com,+1-952-855-3419x2832,36865.12,28-03-2023,North America,74
+5,Margaret Hawkins DDS,perezantonio@example.com,(541)639-5376x7242,44769.21,30-11-2025,South America,14
+6,Kevin Cox,williamdavis@example.org,922-669-1669,33470.9,24-08-2025,,89
+7,Alexandra Le,kayla51@example.com,(727)404-8281x48932,40209.53,12-07-2025,,18
+8,Tammy Sellers,tracy15@example.com,403.491.1718,38062.6,25-12-2024,Asia,96
+9,Carmen Rose,ibrandt@example.net,001-734-265-7871x331,49532.09,26-08-2025,Asia,64
+10,!@#!@$!@ASDASDA,perezrebecca@example.com,983-547-3829,24818.15,18-12-2024,,10
+11,Cheryl Davis,agomez@example.com,001-801-406-5133x3872,39075.66,24-04-2023,,66
+12,Shannon Jones,williamsyvette@example.org,Invalid_Phone,1614.44,25-09-2021,Europe,31
+13,Sarah Martin,zolson@example.org,594-201-4108,25932.27,05-05-2022,,40
+14,William Baker,,246.787.2343x098,17923.14,05-06-2021,,95
+15,123456678,,220.381.2191x36193,7847.48,04-07-2024,South America,62
+16,Krystal Stewart,james53@example.com,580-899-9375,-413.9,22-04-2024,South America,35
+17,Matthew Bryant,smithchristine@example.net,518-738-4251,4757.45,14-05-2023,South America,93
+18,Roy Warner,contrerasangela@example.net,791-266-3586,12183.51,27-10-2021,Europe,50
+19,Brandy Wilson,newtoneric@example.com,+1-235-234-8740x164,41180.06,12-10-2023,Europe,44
+20,Mandy Green,barnold@example.net,4118280598,26472.52,09-01-2022,,18
+21,Jacob Fitzpatrick,nolanjason@example.org,118-359-7868,13424.1,25-10-2021,Europe,25
+22,Justin Baxter,,264-870-7094,29868.58,04-04-2022,North America,11
+23,Cynthia Martin,,167-180-7527,423.06,13-06-2022,North America,6
+24,Allison Doyle,kimberly63@example.com,Invalid_Phone,13983.3,18-04-2022,Asia,78
+25,TESTSTSETTSTSTS,dwalker@example.com,536-924-3693,34242.16,16-07-2023,Europe,22
+26,Shelby Walker,raymondramirez@example.org,001-345-886-8501x42940,8872.73,19-11-2023,,15
+27,Emily Obrien,cruzbarbara@example.com,7607883561,10454.3,01-01-2022,,80
+28,Elizabeth Parker,snguyen@example.com,411-575-6574,27820.91,28-08-2025,South America,48
+29,Jason Bentley,christinaturner@example.net,9449369957,35664.45,04-10-2022,Asia,11
+30,Rebecca Moyer,donnacampbell@example.net,+1-395-913-4332x0037,48666.52,19-06-2024,North America,61
+31,Laura Higgins,psnyder@example.org,+1-401-963-2870x8317,2869.97,17-06-2025,South America,84
+32,Linda Dodson DVM,jrivas@example.com,(677)943-4873,1290.74,07-08-2021,South America,28
+33,Cynthia Rogers,taylorjesse@example.net,(231)566-5876,23353.12,07-07-2024,Europe,68
+34,Randy Shah,gateskathy@example.com,805.946.6889x3734,19813.99,10-03-2021,Europe,75
+35,Michael Yates,marycalhoun@example.net,532-980-9414,43898.29,26-06-2025,Europe,94
+36,James Elliott,millerroy@example.com,(804)665-3755,45557.26,11-07-2024,Europe,78
+37,Bradley Smith,,-668,3046.07,21-12-2022,Asia,91
+38,Michael Elliott,,674.352.9912,23993.97,11-11-2025,Asia,87
+39,Eric Byrd,tsanders@example.org,793-814-9190,47623.57,04-02-2024,South America,69
+40,Matthew Smith,gshort@example.com,(672)762-8498x776,32379.1,11-01-2023,,58
+41,Angelica Keith,karenhudson@example.net,(650)275-2735x4549,12954.66,03-05-2025,Europe,29
+42,Angela Cortez,ppeters@example.net,777.801.4363x4957,6182.3,15-08-2025,Asia,99
+43,Michael Nelson,jerry35@example.org,987-214-1545,8822.39,01-07-2025,Europe,73
+44,Melissa Lee,lhill@example.net,221-137-1022,40146.24,08-05-2023,,26
+45,Dr. Elizabeth Ward,alexis82@example.com,745-745-4226,29304.38,30-04-2021,Europe,87
+46,Kristen Terry,danamullins@example.org,Invalid_Phone,4319.56,17-01-2021,North America,8
+47,Julie Alexander,tammyking@example.com,616-371-9022,3640.8,20-01-2023,,67
+48,Phillip Obrien,kimberlyjames@example.com,266-275-1266,39585.55,21-06-2023,Europe,64
+49,Wanda Torres,lynchjody@example.org,+1-934-612-3281x2067,47279.16,21-03-2021,Asia,66
+50,Michael Warner,ojones@example.com,+1-693-661-8324x2102,46847.22,04-09-2024,South America,85
+51,Michael Lyons,vincent77@example.org,+1-606-259-4013x990,284.48,07-06-2022,Asia,55
+52,Matthew Moon,wendygraham@example.com,875-965-5125,33637.9,24-05-2023,Asia,74
+53,Jennifer Hodges,,Invalid_Phone,7372.06,03-04-2021,North America,11
+54,Ernest Morris,ahancock@example.net,-9775,33592.41,03-09-2022,North America,67
+55,Carlos Roberts,omartinez@example.net,990-662-2584,30388.98,23-12-2022,Asia,98
+56,Emily Smith,hdavis@example.com,527-948-4677,48337.8,18-08-2025,North America,72
+57,Connor Greene,michellehill@example.com,784-804-4997x27875,22100.41,24-10-2024,,24
+58,Sheila Pollard,ashleyhall@example.com,7573662702,34644.57,07-09-2024,Asia,99
+59,Thomas Smith,robertpena@example.org,874-759-6158,45326.99,03-02-2025,Europe,56
+60,Amanda Jones,wendy16@example.org,001-517-824-0050x45562,49585.89,03-10-2025,,8
+61,Catherine Thompson,pharvey@example.com,001-623-474-7407,9846.29,27-07-2021,,20
+62,Gregory Matthews,dvaughn@example.com,667.613.6959,19233.86,16-02-2021,Europe,29
+63,Mary Hill,lozanojulie@example.com,001-739-453-3942x10470,25493.57,16-09-2021,North America,49
+64,Erin Perry,davidryan@example.com,891-711-1432,31579.09,16-06-2025,,1
+65,Denise Martin,scoffey@example.net,317-912-3685x16048,20835.27,29-01-2024,,81
+66,Megan Richards,daniel37@example.org,+1-285-693-1746x120,17876.66,17-02-2025,South America,15
+67,David Medina,qchavez@example.net,001-786-592-6179x640,1435.48,17-09-2024,Europe,98
+68,David Cox,amy50@example.com,531-371-3900x532,24327.15,27-08-2025,North America,97
+69,Daniel Kane,kim90@example.com,Invalid_Phone,41721.47,04-03-2022,Asia,31
+70,Ms. Rebecca Rodriguez,andersonmichael@example.org,001-350-324-0268,38440.66,28-12-2024,,33
+71,Ivan Wheeler,ngordon@example.org,847-656-4291,30633.64,18-05-2025,Asia,82
+72,Mason Johnson,bboone@example.net,477-611-5921,12330.83,02-12-2025,North America,89
+73,Erika Vang,shawn96@example.org,001-318-736-7365x766,48459.54,27-07-2024,Europe,91
+74,David Mckay,fjones@example.org,(215)628-0988x51656,22774.94,07-08-2023,North America,6
+75,Kenneth Lewis,,622-979-3634,28853.69,16-01-2025,,86
+76,Brian Bruce,,(614)293-6899x809,2181.8,23-06-2022,North America,15
+77,Phillip Dorsey,adam29@example.net,(612)701-8366x7525,7538.49,08-10-2025,South America,71
+78,Sophia Moore,craigjoseph@example.net,667-351-3171,-836.37,19-07-2024,South America,79
+79,Mr. Donald Fischer,reeddaniel@example.net,+1-497-684-0369x00343,12169.36,28-05-2023,North America,99
+80,Adam Burgess,davidpatel@example.org,885.816.0607x15969,22183.6,28-05-2023,Asia,12
+81,Alex Nguyen,xcollier@example.org,(313)369-6816x45352,46095.62,15-06-2025,South America,81
+82,Susan Bailey,joelthomas@example.org,(992)712-7799,16897.31,19-08-2023,Europe,6
+83,Barry Ramos,laura90@example.com,814.977.0054x11998,812.75,17-11-2025,,58
+84,Rebecca Huang,kstout@example.net,759.378.2071,11055.91,26-03-2025,Asia,15
+85,Amanda Zimmerman,nwarren@example.org,Invalid_Phone,44301.46,14-01-2024,,76
+86,Douglas Ortiz,erika05@example.org,818-464-4925x19254,15565.73,30-08-2021,,61
+87,James Conner,elizabethcalderon@example.net,+1-581-468-5054x23573,18506.15,05-04-2022,Asia,99
+88,Ryan Garcia,stanleynancy@example.net,Invalid_Phone,36521.71,21-01-2022,,52
+89,Brittany White,jenniferwilliams@example.com,+1-937-994-7383x47359,4791.29,04-05-2023,,68
+90,Kathryn Barnes,lisasolis@example.org,907-458-1814x124,39384.26,30-08-2024,,8
+91,Thomas Velasquez,sarah60@example.com,653.961.5305x15220,6058.43,14-02-2022,Asia,62
+92,Julie Gilbert,smithjason@example.org,607-859-9907,43017.19,11-08-2025,,80
+93,Lisa Henderson,john10@example.org,(897)211-7980x89324,15501.88,11-12-2023,South America,68
+94,Jason Beck,millsmichael@example.net,-8173,15212.03,29-01-2021,,30
+95,Austin Allen,,599-717-3896,5310.11,28-10-2021,North America,5
+96,Nancy Cook,bellmatthew@example.net,(577)222-1704,11211.45,21-08-2022,South America,10
+97,Emily Collins,ihays@example.com,925-335-1556,27856.69,05-02-2023,Asia,36
+98,Matthew Mitchell,glennmartin@example.org,(366)876-5277x584,24482.55,12-08-2021,South America,100
+99,Zachary White,manuel15@example.net,155-222-2811,32715.45,16-06-2023,Europe,15
+100,Lance Simmons,cbell@example.net,Invalid_Phone,12972.11,10-12-2023,South America,17
+101,Jessica Fowler,jonesdana@example.com,220.429.7021x35569,10877.62,07-10-2024,Europe,33
+102,Jacqueline Hines,alyssasanders@example.net,Invalid_Phone,22988.48,24-04-2023,Europe,29
+103,Brian Fitzgerald,jholmes@example.org,447-939-4731x217,36995.89,08-09-2021,North America,65
+104,Tracy Downs,,+1-451-588-4422x58313,-919.07,21-02-2025,South America,7
+105,Julian Wood,cherylmiller@example.com,166-914-8168,383.28,30-04-2024,Europe,66
+106,Dr. Kelly Hammond DVM,martinezlogan@example.org,Invalid_Phone,13540.3,08-10-2024,,13
+107,Joseph Anderson,katrinaanderson@example.net,603-746-8093,47040.64,31-05-2021,Asia,76
+108,Kelly Torres,marcusfletcher@example.com,441.443.8424x98182,12343.33,24-10-2023,Europe,17
+109,Kristy Bryan,millerstacy@example.net,839-669-0784x473,9707.71,19-10-2024,,41
+110,Anthony Gonzales,vmarshall@example.net,(355)756-2588,37698.56,31-12-2022,South America,94
+111,Derek Wright,williamssonia@example.net,(232)359-5327x87747,8396.41,14-04-2024,North America,32
+112,Tracy Lewis,brandon47@example.net,+1-874-280-1624x5650,27484.3,16-10-2025,Asia,42
+113,Heidi Roberts,wgordon@example.net,597-787-8792,45228.21,28-04-2023,Europe,21
+114,Lisa Carr,theresalong@example.com,-9170,43198.14,08-02-2022,,70
+115,Regina Stone,catherinerobertson@example.com,+1-652-969-4958x887,32470.1,30-01-2021,South America,45
+116,Michael Whitney,laura09@example.com,676-713-6494,49636.47,14-03-2023,Asia,18
+117,Rachel Parsons,jennifersilva@example.org,896.523.0913x07562,31641.99,06-06-2024,North America,37
+118,Lisa Ruiz,thorntonapril@example.net,578-565-2785x85497,19355.09,25-04-2023,South America,46
+119,Courtney Dudley,kellie37@example.com,258.644.1986x6524,39359.6,12-08-2021,Asia,45
+120,Jeremy Scott,,233.584.8421x9933,-519.71,03-12-2022,South America,61
+121,Jason Love,maldonadoderrick@example.net,(367)573-4540,33340.76,29-06-2025,Europe,16
+122,Sarah Johnson,robertmonroe@example.org,(972)440-0499x1547,13144.18,25-03-2025,South America,48
+123,Corey Rodriguez,jessicawong@example.net,(805)749-3296,45841.55,05-09-2021,,16
+124,Brandon Holden,pmorris@example.org,563-274-5499x045,32999.5,12-12-2021,South America,70
+125,Christopher Parks,hannah45@example.net,932.572.7956,7453.3,17-01-2023,,82
+126,Linda Cobb,xrice@example.org,001-410-788-3982,16409.65,14-05-2025,South America,53
+127,Michael Love,gdavis@example.com,9726867908,5301.28,15-02-2021,North America,6
+128,Robert Reese,williamsmelvin@example.org,-6192,27312.99,12-03-2024,Asia,11
+129,Thomas Bennett,vegadorothy@example.net,(251)228-6823,41853.02,24-06-2023,Asia,84
+130,Nathan Coleman,pmorrow@example.com,(324)231-0690x331,43477.65,27-09-2024,Asia,56
+131,Michele Williams,moralesjimmy@example.org,001-502-884-3959x95342,47998.81,01-07-2023,South America,26
+132,Justin Vargas,,001-626-887-0568x5662,2034.29,04-07-2022,South America,89
+133,Kara Atkinson,meredith27@example.org,-3987,35920.55,12-08-2021,North America,90
+134,Sarah Davis,brettbennett@example.net,+1-501-539-8373x540,-734.88,09-12-2021,North America,38
+135,Nicole Rocha,randyallen@example.com,001-746-578-5445x87717,3700.83,04-02-2024,North America,53
+136,Angel Shields,allentran@example.net,001-564-923-5369,44665.59,16-08-2025,Europe,97
+137,Melinda Scott,plevy@example.net,560-279-9354,34705.25,11-02-2025,South America,65
+138,Nicholas Bell,jenniferfreeman@example.net,+1-508-901-0062x3120,47494.81,12-02-2024,South America,2
+139,Mark Peck,bhopkins@example.org,Invalid_Phone,47338.64,20-06-2025,Asia,93
+140,Alexandra Moreno,amanda40@example.net,178-602-1628,46082.47,08-08-2024,South America,8
+141,Susan Rodriguez,warrenjohn@example.net,245.346.1567x93341,29233.76,22-05-2024,Europe,68
+142,Juan Brown,warnerchristopher@example.com,Invalid_Phone,-348.62,05-10-2023,Europe,87
+143,Shannon Davis,hallrachel@example.net,255-176-2807,49663.91,05-10-2025,Europe,90
+144,Anthony Jones,rachel90@example.org,703-892-6142x93968,39038.61,17-02-2022,North America,61
+145,Melissa Miller,brian63@example.org,899-496-5047x73586,11539.58,04-12-2025,,82
+146,Angelica Montgomery,jennifermiller@example.org,784-624-2955,42106.66,04-03-2024,,22
+147,Madison Singh,michael10@example.com,854.312.1267x888,33420.81,01-03-2021,Asia,73
+148,Julian Carlson,michelle04@example.com,(918)439-8262x2444,4954.35,24-06-2021,South America,67
+149,Donald Evans,wardsheryl@example.net,+1-879-793-7124x0659,24852.67,07-09-2024,North America,56
+150,Robert Villarreal,kevinmorrison@example.net,Invalid_Phone,31394.69,26-08-2022,,20
+151,Christopher Sanders,kelly79@example.org,564-965-1939x82807,15494.65,03-06-2023,North America,56
+152,Andrea Abbott,ichambers@example.net,834-226-6179x7968,8049.28,01-01-2024,,92
+153,Robin Wheeler,rodriguezjohn@example.net,(529)509-6561x014,19319.78,24-09-2024,Asia,93
+154,Joel Frazier,michaeljohnson@example.org,961-312-5457x3875,32375.64,01-09-2024,,41
+155,Jodi Jones,patrickdarin@example.com,744-892-4281,15536.85,14-11-2021,,32
+156,Carly Riggs,zacharyarnold@example.com,-3068,21149.85,06-10-2024,North America,85
+157,Jasmine Bush,joshuapadilla@example.org,001-618-925-5371,47333.88,06-06-2025,Asia,48
+158,Emily Price,wmatthews@example.com,392.449.9125x134,32516.19,12-02-2024,Europe,66
+159,Kayla Barnes,baileyhenderson@example.com,+1-782-282-7422x5790,44380.06,23-01-2025,,91
+160,Robert Maynard,fortiz@example.com,001-677-421-9034x043,26111.31,30-10-2024,Europe,21
+161,Patricia Simpson,,519.614.8580x78361,295.76,20-03-2021,Europe,2
+162,Gregory Montoya,,447-978-8497,42445.6,04-09-2024,Asia,7
+163,Autumn Cain,lisamatthews@example.com,001-696-429-2330x958,38257.77,11-09-2023,Europe,7
+164,Eileen Armstrong,taylorkaren@example.com,808-886-9786,200.16,12-06-2021,,30
+165,Sharon Martinez DVM,dustinmorris@example.org,001-767-929-4667x11684,597.04,03-02-2025,Europe,24
+166,Aaron Schroeder,simonstephen@example.net,001-751-486-3637x454,25579.2,03-10-2025,,1
+167,Rachel Shannon,williamsconnie@example.com,6124770632,39866.93,10-04-2023,Europe,87
+168,Isaac Miller,brettgarrett@example.net,001-936-211-0371x293,37047.79,04-01-2021,South America,45
+169,Ruth Mcneil,ebenson@example.org,861.411.5542,41703.84,26-02-2022,South America,85
+170,Justin Bishop,scottbowen@example.net,001-826-797-3112x1965,12662.91,17-02-2022,,66
+171,Matthew Wright,kimberly04@example.org,398.236.4037x61379,3071.6,05-01-2024,Europe,13
+172,Bonnie Valencia,rdiaz@example.org,001-871-809-1043x00684,39888.22,12-05-2024,North America,30
+173,Joshua Jensen,,Invalid_Phone,18342.13,21-04-2023,Europe,65
+174,Bob Mccall,amandamyers@example.net,001-614-463-0316x17990,8582.66,16-12-2021,North America,74
+175,Chad Smith,hbenton@example.net,622-376-3653,34292.6,23-02-2023,North America,77
+176,Cameron Norman,jessica10@example.com,575-126-6601,17900.85,04-08-2024,South America,28
+177,Austin Joseph,crawfordwilliam@example.org,292.552.4191x3800,39854.05,01-05-2021,Europe,52
+178,James Hernandez,tranrobin@example.net,192-509-1872,3681.81,04-07-2024,North America,71
+179,David Moon,,941-695-1802x38061,20445.95,02-08-2023,Europe,38
+180,Juan Smith,kellymueller@example.net,+1-237-559-7383x206,20565.42,19-07-2025,,82
+181,Ryan Wiley,aaron64@example.org,283.567.0241,49942.22,12-05-2025,North America,94
+182,Steven Ellis,carpenterwilliam@example.net,317-371-2844,23861.18,18-04-2024,,6
+183,Keith Graham,joelgreen@example.com,(455)974-3132x9121,7349.65,26-11-2024,,5
+184,Bryan Howard,shannonford@example.org,524-790-3521,30933.74,24-04-2024,North America,10
+185,Megan Green,anthonysullivan@example.com,-2009,20769.16,20-01-2022,Asia,94
+186,James Parks,aguilarjonathan@example.org,885-608-7711,11268.57,15-02-2021,North America,49
+187,Christina Brewer PhD,steinmaria@example.com,207-802-9667,43680.19,27-07-2024,South America,85
+188,Daniel Lopez,sean20@example.net,+1-493-847-6870x146,5933.06,21-08-2022,North America,94
+189,Rebecca Wright,mayokimberly@example.com,587.259.8564x2059,17049.82,01-05-2023,North America,58
+190,William Moreno,terrigarcia@example.net,448.503.9652,7820.13,25-08-2023,South America,69
+191,Melissa Sloan,warnermichael@example.net,001-229-337-8427,9595.48,02-06-2021,,11
+192,Daniel Fox,,Invalid_Phone,42594.34,12-12-2020,North America,92
+193,Lucas Drake,jennifer50@example.org,(392)718-5156,26833.34,05-07-2023,North America,90
+194,William Oconnor,fconner@example.net,904-701-8468,48027.08,22-08-2023,South America,78
+195,Wayne Steele,jeffrey92@example.com,542-320-9690x2959,13185.65,28-02-2025,Europe,75
+196,Patrick Young,gary15@example.com,2438315410,30384.89,01-09-2024,North America,77
+197,Tracy Wilkerson,wmacias@example.net,(317)393-2710x4054,28823.37,06-11-2023,North America,58
+198,James Dennis,morgantricia@example.com,001-806-629-6201x533,38947.69,03-05-2023,,78
+199,Brendan Long,xhernandez@example.org,(614)897-3103x24171,19316.25,12-12-2024,Asia,40
+200,Matthew Davis MD,nathanjames@example.org,Invalid_Phone,-16.72,24-09-2024,,98
