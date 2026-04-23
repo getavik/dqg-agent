@@ -1,0 +1,12 @@
+streamlit
+pandas
+ydata-profiling
+great_expectations
+langchain
+Faker
+phonenumbers
+openpyxl
+fpdf
+matplotlib
+google-generativeai
+nltk
