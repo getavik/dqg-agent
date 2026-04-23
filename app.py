@@ -322,7 +322,7 @@ with tab4:
                 except Exception as e:
                     st.error(f"AI Error: {e}")
 
-         if 'ai_impact_text' in st.session_state:
+        if 'ai_impact_text' in st.session_state:
             st.markdown("### 📊 Data Quality Improvement")
             
             # Get the number of failures before and after remediation
