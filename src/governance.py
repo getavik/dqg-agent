@@ -17,7 +17,7 @@ def detect_pii(df: pd.DataFrame, api_key: str = None, sample_rows: int = 15) -> 
         model = _get_available_model(api_key=api_key)
         if model is None:
             return {"error": "No suitable Gemini model found that supports generateContent."}
-
+        
         # Prepare a rich technical summary of the data for the LLM
         # We send a sample and some metadata to allow "Cross-Column" reasoning
         sample_data = df.head(sample_rows).to_json(orient="records")

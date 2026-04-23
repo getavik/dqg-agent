@@ -11,7 +11,7 @@ def _get_available_model(api_key: str):
     genai.configure(api_key=api_key)
     
     # Prioritize flash models for speed, then other generative models
-    preferred_models = ["gemini-pro", "gemini-1.5-flash"]
+    preferred_models = ["models/gemini-2.5-pro", "models/gemini-2.5-flash", "models/gemini-pro-latest"]
     
     for model_name in preferred_models:
         try:
