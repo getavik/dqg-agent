@@ -145,7 +145,14 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Rows", f"{df.shape[0]:,}")
 c2.metric("Columns", f"{df.shape[1]:,}")
 c3.metric("Criticality", criticality)
-if 'validation_results' in st.session_state:
+if 'health_score_after' in st.session_state:
+    score_before = st.session_state.get('health_score_before', 'N/A')
+    score_after = st.session_state.get('health_score_after', 'N/A')
+    c4.metric("Data Health", f"{score_after:.1f}%", delta=f"{score_after - score_before:.1f}% improvement")
+elif 'health_score_before' in st.session_state:
+    score = st.session_state['health_score_before']
+    c4.metric("Data Health (Before)", f"{score:.1f}%")
+elif 'validation_results' in st.session_state:
     score = st.session_state['validation_results']["statistics"]["success_percent"]
     c4.metric("Data Health", f"{score:.1f}%")
 else:
@@ -246,11 +253,11 @@ with tab3:
                     fixed_df = apply_remediation(df, vr["failures"])
                     st.session_state['df'] = fixed_df
                     st.session_state['data_remediated'] = True
+                    st.session_state['health_score_before'] = vr['statistics']['success_percent']
                     st.session_state['report_snapshot'] = vr
                     
                     # Cleanup for refresh
                     if 'ai_impact_text' in st.session_state: del st.session_state['ai_impact_text']
-                    del st.session_state['validation_results']
                     st.rerun()
             else:
                 st.success("✨ All validations passed! Data is compliant.")
@@ -328,10 +335,11 @@ with tab4:
             # Get the number of failures before and after remediation
             before_failures = st.session_state.get('report_snapshot', {}).get("failures", [])
             
-            # Rerun validation on the cleaned data to get the number of failures after remediation
-            validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
-            after_failures = validation_results_after.get("failures", [])
-            
+    # Rerun validation on the cleaned data to get the number of failures after remediation
+    validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
+    st.session_state['health_score_after'] = validation_results_after['statistics']['success_percent']
+    after_failures = validation_results_after.get("failures", [])
+    
             # Create and display the chart
             fig = create_dq_improvement_chart(before_failures, after_failures)
             st.plotly_chart(fig, use_container_width=True)
