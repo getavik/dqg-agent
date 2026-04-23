@@ -18,7 +18,7 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
             prompt = f"""
             Act as a Senior Data Governance Architect. Analyze the provided business intent, technical profile, and PII findings to generate a set of governance and data quality rules in JSON format.
             
-            Integrate the following OWASP AI/LLM Security & Governance principles into your analysis:
+            Integrate the following OWASP AI/LLM Security & Governance principles and DAMA-DMBoK data quality dimensions into your analysis:
             
             1. PII DISCLOSURE (OWASP LLM02/LLM06): Flag any column containing high-risk Personally Identifiable Information (emails, SSNs, names, etc.). 
                - Expectation: Use 'expect_column_values_to_match_regex' with a masking/cleansing intent.
@@ -30,11 +30,19 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
                - Expectation: Use 'expect_column_values_to_not_be_null' or 'expect_column_values_to_match_regex'.
                - Severity: High.
                - Reason: Prevention of Intellectual Property loss and Model Inversion attacks.
-            
+
             3. DATA COMPLETENESS & BIAS (OWASP LLM03): Flag significant gaps in critical columns.
                - Expectation: Use 'expect_column_values_to_not_be_null'.
                - Severity: Medium/High.
                - Reason: Prevention of Model Bias and protection against Training Data Poisoning in logical gaps.
+
+            Six Dimensions of Data Quality (DAMA-DMBoK):
+            1. Accuracy: How well does a piece of information reflect the reality it represents?
+            2. Completeness: Does the data include all the required information?
+            3. Consistency: Is the data consistent within the same dataset and across different datasets?
+            4. Timeliness: Is the information available when it is needed?
+            5. Uniqueness: Is there only one record of each entity in the dataset?
+            6. Validity: Does the data conform to a specific format or standard?
             
             Context Provided:
             - Business Intent: {intent}
@@ -44,7 +52,7 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
             Requirements:
             1. Return ONLY a JSON object with a key "rules" containing a list of rule objects.
             2. Columns: "column", "expectation", "severity", "reason", "dimension".
-            3. Dimensions: "PII Disclosure", "SDPI Compliance", "Data Completeness", "Technical Accuracy".
+            3. Dimensions: "Accuracy", "Completeness", "Consistency", "Timeliness", "Uniqueness", "Validity", "PII Disclosure", "SDPI Compliance".
             
             Explicitly flag verified PII violations as 'Critical' rules. Use your architectural judgement to dismiss obvious false positives where technical detection (e.g. Presidio) conflicts with business context (column names).
             """

@@ -31,6 +31,14 @@ def detect_pii(df: pd.DataFrame, api_key: str = None, sample_rows: int = 15) -> 
         2. Linkable Data (Quasi-Identifiers): Data that can identify an individual when combined (the "Mosaic Effect") (e.g., ZIP + Gender + DOB).
         3. Sensitive Data: Strategic or internal data requiring protection (e.g., trade secrets, proprietary logic).
 
+        Six Dimensions of Data Quality (DAMA-DMBoK):
+        1. Accuracy: How well does a piece of information reflect the reality it represents?
+        2. Completeness: Does the data include all the required information?
+        3. Consistency: Is the data consistent within the same dataset and across different datasets?
+        4. Timeliness: Is the information available when it is needed?
+        5. Uniqueness: Is there only one record of each entity in the dataset?
+        6. Validity: Does the data conform to a specific format or standard?
+
         Dataset Metadata:
         {json.dumps(columns_metadata)}
 
@@ -40,10 +48,11 @@ def detect_pii(df: pd.DataFrame, api_key: str = None, sample_rows: int = 15) -> 
         Task:
         - Identify which columns fall into 'Restricted' (PII/PHI) or 'Confidential' (Internal Sensitive) categories.
         - For each flagged column, specify if it is a 'Direct Identifier' or 'Quasi-Identifier'.
+        - Analyze the data in the context of the six dimensions of data quality and identify any potential issues.
         - Distinguish between true PII and technical attributes (e.g., 'refresh_rate' is technical, not a timestamp PII).
 
-        Return ONLY a JSON object where keys are column names and values are lists of detected DAMA categories/entities.
-        Example: {{"email": ["PII", "Direct Identifier"], "zip_code": ["PII", "Quasi-Identifier"]}}
+        Return ONLY a JSON object where keys are column names and values are lists of detected DAMA categories/entities and data quality issues.
+        Example: {{"email": ["PII", "Direct Identifier", "Completeness Issue"], "zip_code": ["PII", "Quasi-Identifier", "Validity Issue"]}}
         """
 
         response = model.generate_content(prompt)
