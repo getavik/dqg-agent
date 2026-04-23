@@ -154,7 +154,10 @@ elif 'health_score_before' in st.session_state:
     c4.metric("Data Health (Before)", f"{score:.1f}%")
 elif 'validation_results' in st.session_state:
     score = st.session_state['validation_results']["statistics"]["success_percent"]
-    c4.metric("Data Health", f"{score:.1f}%")
+    if score is not None:
+        c4.metric("Data Health", f"{score:.1f}%")
+    else:
+        c4.metric("Data Health", "Pending")
 else:
     c4.metric("Data Health", "Pending")
 
