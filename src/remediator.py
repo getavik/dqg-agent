@@ -38,8 +38,8 @@ def apply_remediation(df: pd.DataFrame, failed_validations: list) -> pd.DataFram
              # If numeric and has negatives, clip to 0? Or drop? Let's Drop.
              
              if pd.api.types.is_numeric_dtype(df_clean[col]):
-                 # Assuming the failure was about being >= 0 as per our context
-                 df_clean = df_clean[df_clean[col] >= 0]
+                 # Replace out-of-bounds values with 0 instead of dropping the row
+                 df_clean.loc[df_clean[col] < 0, col] = 0
         
         elif expectation == "expect_column_values_to_match_regex":
             regex_pattern = failure.get("regex")
