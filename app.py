@@ -3,12 +3,32 @@ import pandas as pd
 import io
 import os
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
 from fpdf import FPDF
 from src.profiler import generate_profile
 from src.governance import detect_pii
 from src.llm_engine import analyze_intent, generate_remediation, generate_business_impact
 from src.validator import validate_data
 from src.reporter import generate_pdf_report
+
+def create_dq_improvement_chart(before_failures, after_failures):
+    """Creates a bar chart showing the reduction in data quality issues."""
+    
+    before_count = len(before_failures)
+    after_count = len(after_failures)
+    
+    fig = go.Figure(data=[
+        go.Bar(name='Before Remediation', x=['Data Quality Issues'], y=[before_count]),
+        go.Bar(name='After Remediation', x=['Data Quality Issues'], y=[after_count])
+    ])
+    
+    fig.update_layout(
+        title='Data Quality Improvement',
+        yaxis_title='Number of Failed Expectations',
+        barmode='group'
+    )
+    return fig
+
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -222,6 +242,7 @@ with tab3:
                 
                 if st.button("🪄 Apply Auto-Remediation", type="primary"):
                     from src.remediator import apply_remediation
+                    st.session_state['original_df_for_report'] = df.copy()
                     fixed_df = apply_remediation(df, vr["failures"])
                     st.session_state['df'] = fixed_df
                     st.session_state['data_remediated'] = True
@@ -247,7 +268,8 @@ with tab3:
         with c_xlsx:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                st.session_state['df'].to_excel(writer, index=False)
+                st.session_state['original_df_for_report'].to_excel(writer, sheet_name='Original Data', index=False)
+                st.session_state['df'].to_excel(writer, sheet_name='Remediated Data', index=False)
             st.download_button("Download Excel", buffer.getvalue(), "remediated_data.xlsx", use_container_width=True)
             
         with c_pdf:
@@ -300,9 +322,27 @@ with tab4:
                 except Exception as e:
                     st.error(f"AI Error: {e}")
 
-        if 'ai_impact_text' in st.session_state:
-            st.markdown("### 📄 Strategic Brief")
-            st.write(st.session_state['ai_impact_text'])
+         if 'ai_impact_text' in st.session_state:
+            st.markdown("### 📊 Data Quality Improvement")
+            
+            # Get the number of failures before and after remediation
+            before_failures = st.session_state.get('report_snapshot', {}).get("failures", [])
+            
+            # Rerun validation on the cleaned data to get the number of failures after remediation
+            validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
+            after_failures = validation_results_after.get("failures", [])
+            
+            # Create and display the chart
+            fig = create_dq_improvement_chart(before_failures, after_failures)
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.markdown(f"### {st.session_state['ai_impact_text'].get('title', 'Strategic Brief')}")
+            st.write(st.session_state['ai_impact_text'].get('summary', ''))
+            
+            for insight in st.session_state['ai_impact_text'].get('insights', []):
+                with st.container():
+                    st.subheader(insight.get('title'))
+                    st.write(insight.get('text'))
             
             # Premium PDF Download
             pdf_premium = generate_pdf_report(
@@ -311,6 +351,6 @@ with tab4:
                 rules=st.session_state['rules'],
                 validation_results=st.session_state.get('report_snapshot', {}),
                 intent=intent,
-                impact_text=st.session_state['ai_impact_text']
+                impact_text=st.session_state['ai_impact_text'].get('summary', '')
             )
             st.download_button("📥 Download Premium AI Report", pdf_premium, "strategic_audit.pdf", type="primary")

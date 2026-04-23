@@ -208,18 +208,17 @@ def generate_business_impact(intent: str, rules: list, failures: list, total_row
                 prompt_parts.append(f"\n--- Financial/Operational Highligts ---")
                 prompt_parts.append(df_summary) # Pass string summary of top generators etc.
                 
-            prompt_parts.append("\n--- goal ---")
-            prompt_parts.append("Provide an 'Executive Data Brief' with exactly 3 bullet points. Do not use markdown bolding (**).")
-            prompt_parts.append("• Strategic Risk: [One succinct sentence on business impact]")
-            prompt_parts.append("• Operational Value: [One succinct sentence on remediation value]")
-            prompt_parts.append("• Forecast: [One succinct sentence projecting a KPI]")
-            prompt_parts.append("Keep it extremely concise, factual, and professional.")
+            prompt_parts.append("\n--- GOAL ---")
+            prompt_parts.append("Provide an 'Executive Data Brief' as a JSON object with the following keys: 'title', 'summary', and 'insights'.")
+            prompt_parts.append("The 'insights' value should be a list of 3-5 bullet points, each with a 'title' and 'text'.")
+            prompt_parts.append("Example: {'title': '...', 'summary': '...', 'insights': [{'title': 'Strategic Risk', 'text': '...'}, ... ]}")
 
             response = model.generate_content("\n".join(prompt_parts))
-            return response.text
+            clean_text = response.text.strip().replace("```json", "").replace("```", "")
+            return json.loads(clean_text)
             
         except Exception as e:
-            return f"AI Generation Failed: {str(e)}\n\n" + _generate_heuristic_impact(intent, rules, failures, total_rows)
+            return {"error": f"AI Generation Failed: {str(e)}"}
 
     # ---------------------------------------------------------
     # PATH B: HEURISTIC / REGEX INSIGHTS (Fallback)
@@ -227,48 +226,51 @@ def generate_business_impact(intent: str, rules: list, failures: list, total_row
     return _generate_heuristic_impact(intent, rules, failures, total_rows)
 
 def _generate_heuristic_impact(intent, rules, failures, total_rows):
-    impact = []
+    impact = {
+        "title": "Data Quality Audit & Remediation Report",
+        "summary": f"The data quality audit for the business objective '{intent}' is complete. The following insights are based on the remediation of data quality issues.",
+        "insights": []
+    }
     
-    # 1. Intent Context
-    impact.append(f"Business Objective: '{intent}'")
-    
-    if not failures:
-        impact.append("Conclusion: Data Quality is 100% aligned with objectives.")
-        return "\n\n".join(impact)
-        
-    # 2. Quantitative Impact
+    # 1. Quantitative Impact
     total_issues = sum(f.get("unexpected_count", 0) for f in failures)
     affected_pct = min(100, (total_issues / total_rows * 100)) if total_rows > 0 else 0
     
-    stats_section = [
-        f"• Data Hygiene Improvement: {total_issues} data points cleansed.",
-        f"• Dataset Reliability: Increased by approximately {affected_pct:.1f}% post-remediation."
-    ]
+    impact["insights"].append({
+        "title": "Data Hygiene Improvement",
+        "text": f"{total_issues} data points were cleansed, increasing dataset reliability by approximately {affected_pct:.1f}%."
+    })
     
-    # 3. ROI / KPI Projections
+    # 2. ROI / KPI Projections
     if "marketing" in intent.lower() and total_rows > 0:
         potential_conversion = total_issues * 0.05 
         est_value = potential_conversion * 100
-        stats_section.append(f"• Campaign ROI: Potentially recovered ~${est_value:,.0f} in Lifecycle Value from {total_issues} invalid leads.")
+        impact["insights"].append({
+            "title": "Campaign ROI",
+            "text": f"Potentially recovered ~${est_value:,.0f} in Lifecycle Value from {total_issues} invalid leads."
+        })
         
     elif "financ" in intent.lower():
-        stats_section.append(f"• Risk Mitigation: Reduced exposure to forecasting errors across {total_issues} financial records.")
+        impact["insights"].append({
+            "title": "Risk Mitigation",
+            "text": f"Reduced exposure to forecasting errors across {total_issues} financial records."
+        })
         
-    impact.append("KPI Improvements:\n" + "\n".join(stats_section))
-    
-    # 4. Strategic Analysis
+    # 3. Strategic Analysis
     failed_cols = set(f["column"] for f in failures)
-    impact.append("Strategic Impediments Removed:")
-    
     if "marketing" in intent.lower():
         email_cols = [c for c in failed_cols if "email" in c.lower()]
         if email_cols:
-             impact.append("- Restored reachability for email campaigns.")
+             impact["insights"].append({
+                "title": "Restored Reachability",
+                "text": "Restored reachability for email campaigns by fixing invalid email formats."
+             })
         
         phone_cols = [c for c in failed_cols if "phone" in c.lower()]
         if phone_cols:
-             impact.append("- Enabling SMS/Voice channels by standardizing numbers.")
+             impact["insights"].append({
+                "title": "Enabled SMS/Voice Channels",
+                "text": "Enabled SMS/Voice channels by standardizing phone numbers."
+             })
             
-    impact.append("\nFinal Verdict: The dataset is now structurally sound for downstream analytics.")
-    
-    return "\n\n".join(impact)
+    return impact

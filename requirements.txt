@@ -10,3 +10,4 @@ fpdf
 matplotlib
 google-generativeai
 nltk
+plotly
