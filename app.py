@@ -335,11 +335,11 @@ with tab4:
             # Get the number of failures before and after remediation
             before_failures = st.session_state.get('report_snapshot', {}).get("failures", [])
             
-    # Rerun validation on the cleaned data to get the number of failures after remediation
-    validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
-    st.session_state['health_score_after'] = validation_results_after['statistics']['success_percent']
-    after_failures = validation_results_after.get("failures", [])
-    
+            # Rerun validation on the cleaned data to get the number of failures after remediation
+            validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
+            st.session_state['health_score_after'] = validation_results_after['statistics']['success_percent']
+            after_failures = validation_results_after.get("failures", [])
+            
             # Create and display the chart
             fig = create_dq_improvement_chart(before_failures, after_failures)
             st.plotly_chart(fig, use_container_width=True)
