@@ -14,7 +14,7 @@ def detect_pii(df: pd.DataFrame, api_key: str = None, sample_rows: int = 15) -> 
 
     try:
         genai.configure(api_key=api_key)
-        model = _get_available_model(api_key=api_key)
+        model, _ = _get_available_model(api_key=api_key)
         if model is None:
             return {"error": "No suitable Gemini model found that supports generateContent."}
         

@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import io
 import os
+import json
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
-from fpdf import FPDF
 from src.profiler import generate_profile
 from src.governance import detect_pii
 from src.llm_engine import analyze_intent, generate_remediation, generate_business_impact
-from src.validator import validate_data
-from src.reporter import generate_pdf_report
+from src.dq_utils import validate_and_tag_data, remediate_data
+from src.reporter import generate_pdf_report, format_profiling_summary_for_excel, generate_profiling_pdf_from_html
 
 def create_dq_improvement_chart(before_failures, after_failures):
     """Creates a bar chart showing the reduction in data quality issues."""
@@ -36,6 +36,21 @@ st.set_page_config(
     page_title="Governance Bridge | Smart Data Agent",
     page_icon="🛡️"
 )
+
+# --- INITIALIZE SESSION STATE ---
+if "total_input_tokens" not in st.session_state:
+    st.session_state.total_input_tokens = 0
+if "total_output_tokens" not in st.session_state:
+    st.session_state.total_output_tokens = 0
+if "estimated_cost" not in st.session_state:
+    st.session_state.estimated_cost = 0.0
+
+# --- MODEL PRICING ---
+MODEL_PRICING = {
+    "models/gemini-2.5-pro": {"input": 0.5 / 1_000_000, "output": 1.5 / 1_000_000},
+    "models/gemini-pro-latest": {"input": 0.5 / 1_000_000, "output": 1.5 / 1_000_000},
+    # Add other models as needed
+}
 
 # --- MATERIAL DESIGN 3 STYLING ---
 st.markdown("""
@@ -128,10 +143,24 @@ with st.sidebar:
         st.info("💡 Add Gemini Key for AI features.")
         st.session_state['gemini_key'] = None
 
+    st.divider()
+    st.subheader("Session API Usage")
+    col1, col2 = st.columns(2)
+    col1.metric("Input Tokens", st.session_state.total_input_tokens)
+    col2.metric("Output Tokens", st.session_state.total_output_tokens)
+    st.metric("Estimated Cost", f"${st.session_state.estimated_cost:.5f}")
+
 # --- APP LOGIC ---
 if not uploaded_file or not intent:
     st.info("👋 Welcome! Please upload a dataset and define your business intent in the sidebar to begin.")
     st.stop()
+
+# Check for new file upload and reset state if necessary
+if 'current_file' not in st.session_state or st.session_state['current_file'] != uploaded_file.name:
+    for key in list(st.session_state.keys()):
+        if key not in ['gemini_key', 'total_input_tokens', 'total_output_tokens', 'estimated_cost']:
+            del st.session_state[key]
+    st.session_state['current_file'] = uploaded_file.name
 
 # Load Data
 if 'df' not in st.session_state:
@@ -145,19 +174,18 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Rows", f"{df.shape[0]:,}")
 c2.metric("Columns", f"{df.shape[1]:,}")
 c3.metric("Criticality", criticality)
-if 'health_score_after' in st.session_state:
-    score_before = st.session_state.get('health_score_before', 'N/A')
-    score_after = st.session_state.get('health_score_after', 'N/A')
-    c4.metric("Data Health", f"{score_after:.1f}%", delta=f"{score_after - score_before:.1f}% improvement")
-elif 'health_score_before' in st.session_state:
-    score = st.session_state['health_score_before']
-    c4.metric("Data Health (Before)", f"{score:.1f}%")
-elif 'validation_results' in st.session_state:
-    score = st.session_state['validation_results']["statistics"]["success_percent"]
-    if score is not None:
-        c4.metric("Data Health", f"{score:.1f}%")
+
+score_after = st.session_state.get('health_score_after')
+score_before = st.session_state.get('health_score_before')
+
+if score_after is not None:
+    if score_before is not None and st.session_state.get('data_remediated'):
+        delta = score_after - score_before
+        c4.metric("Data Health", f"{score_after:.1f}%", delta=f"{delta:.1f}% improvement")
     else:
-        c4.metric("Data Health", "Pending")
+        c4.metric("Data Health", f"{score_after:.1f}%")
+elif score_before is not None:
+    c4.metric("Data Health (Initial)", f"{score_before:.1f}%")
 else:
     c4.metric("Data Health", "Pending")
 
@@ -174,18 +202,38 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # --- TAB 1: PROFILING ---
 with tab1:
     st.header("Stage 1: Technical Metadata Discovery")
-    col_btn, col_info = st.columns([1, 3])
     
-    with col_btn:
-        if st.button("🚀 Run Profiling", use_container_width=True):
-            with st.spinner("Analyzing data distribution..."):
-                profile_results = generate_profile(df)
-                st.session_state['profile_summary'] = profile_results["summary"]
-                st.session_state['report_html'] = profile_results["report_html"]
-                st.toast("Profiling Complete!", icon="✅")
+    # Use remediated data if available
+    data_for_profiling = st.session_state.get('remediated_df', df)
+    
+    if st.button("🚀 Run Profiling", key="run_profiling"):
+        with st.spinner("Analyzing data distribution..."):
+            profile_results = generate_profile(data_for_profiling)
+            st.session_state['profile_results'] = profile_results
+            st.session_state['profile_summary'] = profile_results["summary"]
+            st.session_state['report_html'] = profile_results["report_html"]
+            
+            # Calculate Initial Health Score based on completeness
+            cols_stats = profile_results["summary"]["columns"]
+            if cols_stats:
+                avg_missing = sum(s["p_missing"] for s in cols_stats.values()) / len(cols_stats)
+                st.session_state['health_score_before'] = (1 - avg_missing) * 100
+            
+            st.toast("Profiling Complete!", icon="✅")
 
     if 'report_html' in st.session_state:
         st.markdown("### 📈 Data Distribution Report")
+        
+        # Download button for PDF report
+        pdf_data = generate_profiling_pdf_from_html(st.session_state['report_html'])
+        st.download_button(
+            label="Download Profiling Report (PDF)",
+            data=pdf_data,
+            file_name="profiling_report.pdf",
+            mime="application/pdf",
+            key="download_profiling"
+        )
+        
         components.html(st.session_state['report_html'], height=700, scrolling=True)
     else:
         st.info("Start by profiling the data to understand its structure and quality issues.")
@@ -197,29 +245,42 @@ with tab2:
     if 'profile_summary' not in st.session_state:
         st.warning("⚠️ Please complete Stage 1 (Profiling) first.")
     else:
-        if st.button("🔍 Synthesize Governance Rules", use_container_width=True):
+        if st.button("🔍 Synthesize Governance Rules", key="synthesize_rules"):
+            if 'rules' in st.session_state: del st.session_state['rules']
+            if 'pii_results' in st.session_state: del st.session_state['pii_results']
+            
             with st.spinner("Analyzing Sensitive Data & Mapping DAMA Standards..."):
                 pii_results = detect_pii(df, api_key=st.session_state.get('gemini_key'))
                 st.session_state['pii_results'] = pii_results
 
-                rules_output = analyze_intent(
+                rules_output, usage = analyze_intent(
                     intent, 
                     st.session_state['profile_summary'], 
                     pii_results,
                     api_key=st.session_state.get('gemini_key')
                 )
+                if usage:
+                    st.session_state.total_input_tokens += usage['prompt_token_count']
+                    st.session_state.total_output_tokens += usage['candidates_token_count']
+                    pricing = MODEL_PRICING.get(usage['model_name'], {"input": 0, "output": 0})
+                    st.session_state.estimated_cost += (usage['prompt_token_count'] * pricing["input"]) + (usage['candidates_token_count'] * pricing["output"])
+
                 st.session_state['rules'] = rules_output["rules"]
                 st.toast("Rules Generated!", icon="🛡️")
         if 'rules' in st.session_state:
-            col_pii, col_rules = st.columns([1, 2])
+            st.subheader("🕵️ PII Findings")
             
-            with col_pii:
-                st.subheader("🕵️ PII Findings")
-                st.json(st.session_state.get('pii_results', {}))
-            
-            with col_rules:
-                st.subheader("📝 Synthesized Rules")
-                st.dataframe(st.session_state['rules'], use_container_width=True)
+            pii_json_data = json.dumps(st.session_state.get('pii_results', {}), indent=4)
+            st.download_button(
+                label="Download PII Findings as JSON",
+                data=pii_json_data,
+                file_name="pii_findings.json",
+                mime="application/json",
+                key="download_pii"
+            )
+
+            st.subheader("📝 Synthesized Rules")
+            st.dataframe(pd.DataFrame(st.session_state['rules']))
 
 # --- TAB 3: EXECUTION ---
 with tab3:
@@ -228,140 +289,114 @@ with tab3:
     if 'rules' not in st.session_state:
         st.warning("⚠️ Please complete Stage 2 (Governance) first.")
     else:
-        if st.button("⚖️ Run Validation", use_container_width=True):
-            with st.spinner("Executing Data Quality Gates..."):
-                validation_results = validate_data(df, st.session_state['rules'])
-                st.session_state['validation_results'] = validation_results
-                st.toast("Validation Complete!", icon="📊")
+        if st.button("⚖️ Run Validation & Remediation", key="run_validation"):
+            with st.spinner("Executing Data Quality Gates and Applying Fixes..."):
+                tagged_df = validate_and_tag_data(df, st.session_state['rules'])
+                remediated_df = remediate_data(tagged_df, st.session_state['rules'], st.session_state.get('pii_results', {}))
+                st.session_state['remediated_df'] = remediated_df
+                st.toast("Validation and Remediation Complete!", icon="✅")
 
-        if 'validation_results' in st.session_state:
-            vr = st.session_state['validation_results']
+        if 'remediated_df' in st.session_state:
+            st.subheader("Data Remediation Summary")
+            remediated_df = st.session_state['remediated_df']
             
-            if vr["failures"]:
-                st.error(f"🚨 Found {len(vr['failures'])} Failed Expectations")
-                st.dataframe(vr["failures"], use_container_width=True)
-                
-                # Remediation Section
-                st.divider()
-                st.subheader("🛠️ Remediation Plan")
-                plan = generate_remediation(vr["failures"])
-                
-                for item in plan["remediations"]:
-                    with st.expander(f"Fix for {item['issue']}"):
-                        st.code(item['python_fix'], language='python')
-                
-                if st.button("🪄 Apply Auto-Remediation", type="primary"):
-                    from src.remediator import apply_remediation
-                    st.session_state['original_df_for_report'] = df.copy()
-                    fixed_df = apply_remediation(df, vr["failures"])
-                    st.session_state['df'] = fixed_df
-                    st.session_state['data_remediated'] = True
-                    st.session_state['health_score_before'] = vr['statistics']['success_percent']
-                    st.session_state['report_snapshot'] = vr
-                    
-                    # Cleanup for refresh
-                    if 'ai_impact_text' in st.session_state: del st.session_state['ai_impact_text']
-                    st.rerun()
-            else:
-                st.success("✨ All validations passed! Data is compliant.")
+            st.dataframe(remediated_df)
 
-    if st.session_state.get('data_remediated'):
-        st.success("✅ Data remediated and updated in memory.")
-        st.subheader("📦 Export Results")
-        
-        c_csv, c_xlsx, c_pdf = st.columns(3)
-        
-        with c_csv:
-            csv_data = st.session_state['df'].to_csv(index=False).encode('utf-8')
-            st.download_button("Download CSV", csv_data, "remediated_data.csv", "text/csv", use_container_width=True)
+            st.subheader("📦 Export Results")
             
-        with c_xlsx:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                st.session_state['original_df_for_report'].to_excel(writer, sheet_name='Original Data', index=False)
-                st.session_state['df'].to_excel(writer, sheet_name='Remediated Data', index=False)
-            st.download_button("Download Excel", buffer.getvalue(), "remediated_data.xlsx", use_container_width=True)
-            
-        with c_pdf:
-            # Generate impact for report
-            imp = generate_business_impact(intent, st.session_state['rules'], 
-                                         st.session_state.get('report_snapshot', {}).get("failures", []), 
-                                         len(st.session_state['df']))
-            pdf_data = generate_pdf_report(
-                df_original=st.session_state['df'], # Simplified for demo
-                df_fixed=st.session_state['df'],
-                rules=st.session_state['rules'],
-                validation_results=st.session_state.get('report_snapshot', {}),
-                intent=intent,
-                impact_text=imp
+                st.session_state['df'].to_excel(writer, sheet_name='Initial Data', index=False)
+                remediated_df.to_excel(writer, sheet_name='Remediated Data', index=False)
+                if 'rules' in st.session_state:
+                    pd.DataFrame(st.session_state['rules']).to_excel(writer, sheet_name='Synthesized Rules', index=False)
+
+            st.download_button(
+                label="Download Remediation Report (Excel)",
+                data=buffer.getvalue(),
+                file_name="dq_remediation_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_remediation"
             )
-            st.download_button("Download Audit Report", pdf_data, "audit_report.pdf", use_container_width=True)
 
 # --- TAB 4: INTELLIGENCE ---
 with tab4:
     st.header("🤖 AI Strategic Analysis")
     st.caption("Deep risk analysis and ROI forecasting powered by Google Gemini.")
     
-    if not st.session_state.get('data_remediated'):
-        st.info("Apply auto-remediation in Tab 3 to unlock AI Strategic Insights.")
+    if 'remediated_df' not in st.session_state:
+        st.info("Complete Stage 3 (Validation & Remediation) to unlock AI Strategic Insights.")
     else:
-        if st.button("🚀 Generate Strategic Intelligence", type="primary"):
+        if st.button("🚀 Generate Strategic Intelligence", key="run_intelligence"):
             if not st.session_state.get('gemini_key'):
                 st.error("Missing Gemini API Key in sidebar.")
             else:
                 try:
-                    with st.status("AI Agent Analyzing...", expanded=True) as status:
-                        st.write("📊 Contextualizing Governance Metadata...")
-                        # Context Prep
-                        df_ctx = st.session_state['df']
+                    with st.spinner("AI Agent Analyzing..."):
+                        remediated_df = st.session_state['remediated_df']
+                        df_ctx = remediated_df.drop(columns=['dq_status'], errors='ignore')
+                        
+                        # Detect failures for the AI prompt
+                        # We'll use a simple heuristic: any row not 'good' is a failure
+                        failures_count = len(remediated_df[remediated_df['dq_status'] != 'good'])
+                        
+                        # Create a mock failures list for the AI engine
+                        mock_failures = []
+                        # (We could be more detailed here if we parsed dq_status)
+                        mock_failures.append({"column": "Multiple", "expectation": "Various", "unexpected_count": failures_count})
+
                         rev_col = next((c for c in df_ctx.columns if any(x in c.lower() for x in ['amount', 'revenue'])), None)
                         total_rev = f"{pd.to_numeric(df_ctx[rev_col], errors='coerce').sum():,.2f}" if rev_col else "N/A"
                         ctx_str = f"Columns: {list(df_ctx.columns)}\nFinancial Value: {total_rev}"
                         
-                        st.write("🧠 Synthesizing Strategic Impact...")
-                        ai_text = generate_business_impact(
+                        ai_text, usage = generate_business_impact(
                             intent=intent,
                             rules=st.session_state['rules'],
-                            failures=st.session_state.get('report_snapshot', {}).get("failures", []),
+                            failures=mock_failures,
                             total_rows=len(df_ctx),
                             api_key=st.session_state['gemini_key'],
                             df_summary=ctx_str
                         )
+                        if usage:
+                            st.session_state.total_input_tokens += usage['prompt_token_count']
+                            st.session_state.total_output_tokens += usage['candidates_token_count']
+                            pricing = MODEL_PRICING.get(usage['model_name'], {"input": 0, "output": 0})
+                            st.session_state.estimated_cost += (usage['prompt_token_count'] * pricing["input"]) + (usage['candidates_token_count'] * pricing["output"])
+
                         st.session_state['ai_impact_text'] = ai_text
-                        status.update(label="✅ Analysis Ready", state="complete")
                 except Exception as e:
                     st.error(f"AI Error: {e}")
 
         if 'ai_impact_text' in st.session_state:
-            st.markdown("### 📊 Data Quality Improvement")
+            st.markdown("### 📊 Data Quality Insights")
             
-            # Get the number of failures before and after remediation
-            before_failures = st.session_state.get('report_snapshot', {}).get("failures", [])
+            remediated_df = st.session_state['remediated_df']
+            good_count = len(remediated_df[remediated_df['dq_status'] == 'good'])
+            fixed_count = len(remediated_df[remediated_df['dq_status'].str.contains('fixed', na=False)])
+            bad_count = len(remediated_df[remediated_df['dq_status'].str.contains('bad', na=False)])
             
-            # Rerun validation on the cleaned data to get the number of failures after remediation
-            validation_results_after = validate_data(st.session_state['df'], st.session_state['rules'])
-            st.session_state['health_score_after'] = validation_results_after['statistics']['success_percent']
-            after_failures = validation_results_after.get("failures", [])
-            
-            # Create and display the chart
-            fig = create_dq_improvement_chart(before_failures, after_failures)
-            st.plotly_chart(fig, use_container_width=True)
+            # Simple bar chart for record status
+            fig = go.Figure(data=[
+                go.Bar(name='Records', x=['Good', 'Fixed', 'Bad (Manual)'], y=[good_count, fixed_count, bad_count])
+            ])
+            st.plotly_chart(fig)
 
             st.markdown(f"### {st.session_state['ai_impact_text'].get('title', 'Strategic Brief')}")
             st.write(st.session_state['ai_impact_text'].get('summary', ''))
             
             for insight in st.session_state['ai_impact_text'].get('insights', []):
-                with st.container():
-                    st.subheader(insight.get('title'))
-                    st.write(insight.get('text'))
+                st.subheader(insight.get('title'))
+                st.write(insight.get('text'))
             
-            # Premium PDF Download
+            # Use original df and remediated df for the audit report
             pdf_premium = generate_pdf_report(
                 df_original=st.session_state['df'],
-                df_fixed=st.session_state['df'],
+                df_fixed=st.session_state['remediated_df'],
                 rules=st.session_state['rules'],
-                validation_results=st.session_state.get('report_snapshot', {}),
+                validation_results={"failures": [], "statistics": {"success_percent": (good_count/len(remediated_df)*100)}},
                 intent=intent,
                 impact_text=st.session_state['ai_impact_text'].get('summary', '')
             )
-            st.download_button("📥 Download Premium AI Report", pdf_premium, "strategic_audit.pdf", type="primary")
+            st.download_button("📥 Download Premium AI Report", pdf_premium, "strategic_audit.pdf", key="download_premium")
+
+

@@ -1,21 +1,59 @@
-
+import pandas as pd
+from fpdf import FPDF, HTMLMixin
 import os
 import tempfile
 import matplotlib.pyplot as plt
-import pandas as pd
-from fpdf import FPDF
 from datetime import datetime
+import pdfkit
+
+# Path to wkhtmltopdf executable
+path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
+class PDF(FPDF, HTMLMixin):
+    pass
+
+def generate_profiling_pdf_from_html(html_string: str) -> bytes:
+    """
+    Generates a PDF from an HTML string using pdfkit.
+    """
+    return pdfkit.from_string(html_string, False, configuration=config)
+
+def format_profiling_summary_for_excel(summary: dict) -> pd.DataFrame:
+    """
+    Converts the ydata-profiling summary JSON into a readable DataFrame for Excel.
+    """
+    if not summary or 'columns' not in summary:
+        return pd.DataFrame({"Info": ["Profiling data is not available."]})
+
+    rows = []
+    for col, details in summary['columns'].items():
+        row = {
+            "Column": col,
+            "Type": details.get('type', 'N/A'),
+            "Mean": details.get('mean', 'N/A'),
+            "StdDev": details.get('std', 'N/A'),
+            "Min": details.get('min', 'N/A'),
+            "Max": details.get('max', 'N/A'),
+            "Zeros (%)": details.get('p_zeros', 'N/A'),
+            "Missing (%)": details.get('p_missing', 'N/A'),
+            "Distinct Count": details.get('n_distinct', 'N/A'),
+        }
+        rows.append(row)
+        
+    return pd.DataFrame(rows)
 
 class PDFReport(FPDF):
     def header(self):
-        self.set_font('Arial', 'B', 12)
+        self.set_font('helvetica', 'B', 12)
         self.cell(0, 10, 'Data Quality Audit Report', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
+        self.set_font('helvetica', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
 
 def generate_charts(rules, failures, df_fixed):
     paths = []
@@ -243,7 +281,7 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
     pdf = PDFReport()
     pdf.alias_nb_pages()
     pdf.add_page()
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('helvetica', '', 11)
     
     # Helper to clean text
     def clean(t): return safe_text(str(t))
@@ -312,29 +350,39 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
         pdf.set_xy(x_start, y_start + height)
 
     # 1. Executive Summary
-    pdf.set_font('Arial', 'B', 14)
+    pdf.set_font('helvetica', 'B', 14)
     pdf.cell(0, 10, '1. Executive Summary', 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('helvetica', '', 11)
     
     pdf.cell(0, 8, f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1)
     pdf.cell(0, 8, f"Total Rows: {len(df_original)}", 0, 1)
     pdf.cell(0, 8, f"Total Columns: {len(df_original.columns)}", 0, 1)
     
-    success_rate = validation_results["statistics"].get("success_percent", 0)
+    # If the statistics dictionary is None or the key is missing, default to 0.0
+    stats = validation_results.get("statistics")
+    if stats:
+        success_rate = stats.get("success_percent", 0.0)
+    else:
+        success_rate = 0.0
+    
+    # Ensure success_rate is not None before formatting
+    if success_rate is None:
+        success_rate = 0.0
+        
     pdf.cell(0, 8, f"Data Health Score: {success_rate:.1f}%", 0, 1)
     pdf.ln(3)
 
     # 1b. Executive Analysis (AI or Heuristic)
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('helvetica', 'B', 12)
     pdf.cell(0, 8, 'Executive Analysis:', 0, 1)
-    pdf.set_font('Arial', '', 10)
+    pdf.set_font('helvetica', '', 10)
     # Strip potential markdown formatting if any remains
     clean_impact = safe_text(impact_text).replace('**', '').replace('##', '')
     pdf.multi_cell(0, 6, clean_impact)
     pdf.ln(5)
     
     # 2. Visual Insights (Consolidated)
-    pdf.set_font('Arial', 'B', 14)
+    pdf.set_font('helvetica', 'B', 14)
     pdf.cell(0, 10, '2. Visual Insights', 0, 1)
     
     # Generate all charts
@@ -387,9 +435,9 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
     pdf.ln(5) # Spacing
     
     # 3. Governance Rules
-    pdf.set_font('Arial', 'B', 14)
+    pdf.set_font('helvetica', 'B', 14)
     pdf.cell(0, 10, '3. Governance Rules Enforced', 0, 1)
-    pdf.set_font('Arial', '', 10)
+    pdf.set_font('helvetica', '', 10)
     
     # Define Column Widths (Fixed for Portrait)
     # Total ~190mm
@@ -398,14 +446,14 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
     
     # Header
     pdf.set_fill_color(240, 240, 240)
-    pdf.set_font('Arial', 'B', 10)
+    pdf.set_font('helvetica', 'B', 10)
     x_start = pdf.get_x()
     for i, h in enumerate(headers):
         pdf.cell(c_widths[i], 8, h, 1, 0, 'C', 1)
     pdf.ln()
     
     # Rows
-    pdf.set_font('Arial', '', 8)
+    pdf.set_font('helvetica', '', 8)
     for r in rules:
         row_data = [
             clean(str(r.get("column", "-"))),
@@ -418,9 +466,9 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
     pdf.ln(5)
 
     # 4. Remediation Log
-    pdf.set_font('Arial', 'B', 14)
+    pdf.set_font('helvetica', 'B', 14)
     pdf.cell(0, 10, '4. Issues Remedied', 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('helvetica', '', 11)
     
     if validation_results["failures"]:
         for f in validation_results["failures"]:
@@ -438,11 +486,11 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
         
     # 5. Data Highlight
     pdf.add_page("L") # Landscape for data table
-    pdf.set_font('Arial', 'B', 14)
+    pdf.set_font('helvetica', 'B', 14)
     pdf.cell(0, 10, '5. Remediated Data Snapshot (First 20 Rows)', 0, 1)
     
     # Dynamic Width Calculation - "Fit to Page"
-    pdf.set_font('Arial', '', 8)
+    pdf.set_font('helvetica', '', 8)
     
     # Use as many columns as possible, but ensure we fit page width (approx 277mm for A4 L)
     page_width = 275 
@@ -470,15 +518,15 @@ def generate_pdf_report(df_original, df_fixed, rules, validation_results, intent
     
     # Table Header
     pdf.set_fill_color(240, 240, 240)
-    pdf.set_font('Arial', 'B', 8)
+    pdf.set_font('helvetica', 'B', 8)
     for i, c in enumerate(cols):
         pdf.cell(final_widths[i], 8, clean(str(c)[:25]), 1, 0, 'C', 1)
     pdf.ln()
     
     # Rows
-    pdf.set_font('Arial', '', 7)
+    pdf.set_font('helvetica', '', 7)
     for i in range(min(len(df_fixed), 30)):
         row_data = [clean(str(df_fixed.iloc[i][c])) for c in cols]
         render_table_row(pdf, final_widths, row_data)
     
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output()
