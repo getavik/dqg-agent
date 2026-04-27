@@ -20,7 +20,8 @@ def generate_profiling_pdf_from_html(html_string: str) -> bytes:
         "This is a simplified PDF summary. For the full interactive experience, please open the "
         "HTML version of the report, which is displayed in the 'Profiling' tab of the application."
     )
-    return pdf.output()
+    # Ensure output is bytes
+    return bytes(pdf.output())
 
 def format_profiling_summary_for_excel(summary: dict) -> pd.DataFrame:
     """
