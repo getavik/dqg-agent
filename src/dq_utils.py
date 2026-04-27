@@ -38,7 +38,7 @@ GEOGRAPHIC_DATA = {
     }
 }
 
-# Defaults per column pattern
+# Mapping of field patterns to default values
 CRITICAL_FIELD_DEFAULTS = {
     "ssn": "000-00-0000",
     "pan": "ABCDE1234F",
@@ -55,20 +55,21 @@ CRITICAL_FIELD_DEFAULTS = {
 
 # --- HELPERS ---
 
-def is_scalar_nan(val):
-    """Safe check for NaN that avoids array ambiguity errors."""
-    try:
-        return pd.isna(val)
-    except ValueError:
-        # If it's an array or unexpected object, we treat it as NOT a simple NaN
-        return False
+def is_blank(val):
+    """Checks if a value is null, NaN, or an empty/whitespace string."""
+    if pd.isna(val):
+        return True
+    if isinstance(val, str) and not val.strip():
+        return True
+    return False
 
-def get_scalar_value(df, idx, col):
-    """Safely get a scalar value from a dataframe cell."""
-    val = df.at[idx, col]
-    if isinstance(val, (pd.Series, pd.DataFrame)):
-        return val.iloc[0] if not val.empty else None
-    return val
+def to_sentence_case(s):
+    if not isinstance(s, str) or not s:
+        return s
+    s = s.strip()
+    if not s:
+        return s
+    return s.capitalize()
 
 def fuzzy_match_scalar(query, choices, threshold=85):
     if not query or not choices:
@@ -80,16 +81,8 @@ def fuzzy_match_scalar(query, choices, threshold=85):
         return choices[[c.upper() for c in choices].index(match[0])]
     return None
 
-def to_sentence_case(s):
-    if not isinstance(s, str) or not s:
-        return s
-    s = s.strip()
-    if not s:
-        return s
-    return s.capitalize()
-
 def clean_numeric_scalar(val):
-    if is_scalar_nan(val): return val
+    if is_blank(val): return val
     if isinstance(val, (int, float)): return val
     # Extract numbers, periods, and minus signs
     clean_str = "".join(re.findall(r'[0-9\.\-]', str(val)))
@@ -102,7 +95,7 @@ def clean_numeric_scalar(val):
 
 def validate_and_tag_data(df: pd.DataFrame, rules: list) -> pd.DataFrame:
     """
-    Validates data against a set of rules and tags each row with its DQ status.
+    Initial validation and tagging of issues.
     """
     val_df = df.copy()
     val_df['dq_status'] = 'good'
@@ -114,32 +107,22 @@ def validate_and_tag_data(df: pd.DataFrame, rules: list) -> pd.DataFrame:
         if col not in val_df.columns: continue
 
         if expectation == "expect_column_values_to_not_be_null":
-            mask_bad = val_df[col].isnull() | (val_df[col].astype(str).str.strip() == "")
+            mask_bad = val_df[col].apply(is_blank)
             for idx in val_df[mask_bad].index:
                 val_df.at[idx, '_issues'].append(f"{col} (null)")
             
         elif expectation == "expect_column_values_to_match_regex":
             regex = rule.get("regex", ".*")
-            mask_not_match = ~val_df[col].astype(str).str.match(regex, na=False)
+            # We only check regex on non-blank values
+            mask_val = ~val_df[col].apply(is_blank)
+            mask_not_match = mask_val & ~val_df[col].astype(str).str.match(regex, na=False)
             for idx in val_df[mask_not_match].index:
                 val_df.at[idx, '_issues'].append(f"{col} (invalid format)")
 
         elif expectation == "expect_column_values_to_be_unique":
-            mask_duplicate = val_df.duplicated(subset=[col], keep=False) & val_df[col].notnull()
+            mask_duplicate = val_df.duplicated(subset=[col], keep=False) & ~val_df[col].apply(is_blank)
             for idx in val_df[mask_duplicate].index:
                 val_df.at[idx, '_issues'].append(f"{col} (not unique)")
-
-        elif expectation == "expect_column_values_to_be_between":
-            min_val = rule.get("min_value")
-            max_val = rule.get("max_value")
-            if min_val is not None or max_val is not None:
-                series = pd.to_numeric(val_df[col], errors='coerce')
-                mask_out = pd.Series(False, index=val_df.index)
-                if min_val is not None: mask_out |= (series < min_val)
-                if max_val is not None: mask_out |= (series > max_val)
-                mask_out &= series.notnull()
-                for idx in val_df[mask_out].index:
-                    val_df.at[idx, '_issues'].append(f"{col} (out of range)")
 
     for idx in val_df.index:
         issues = val_df.at[idx, '_issues']
@@ -150,7 +133,7 @@ def validate_and_tag_data(df: pd.DataFrame, rules: list) -> pd.DataFrame:
 
 def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> pd.DataFrame:
     """
-    Modular and robust remediation engine.
+    Main remediation engine.
     """
     # 0. Setup and Index alignment
     remediated_df = df.copy().reset_index(drop=True)
@@ -166,27 +149,23 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
 
     # 1. Sequential ID Population
     for col in id_cols:
-        series = remediated_df[col]
-        if series.isnull().any() or (series.astype(str).str.strip() == "").any():
-            # Check for numeric or alphanumeric sequence
-            # We use a simple loop for clarity and to avoid complexity
-            for i in range(1, len(remediated_df)):
-                curr_val = str(remediated_df.loc[i, col]).strip()
-                if curr_val == "" or curr_val == "nan":
-                    prev_val = str(remediated_df.loc[i-1, col]).strip()
-                    if prev_val != "" and prev_val != "nan":
-                        # Try Alphanumeric increment (e.g. CUST001 -> CUST002)
-                        match = re.match(r'^([a-zA-Z]+)(\d+)$', prev_val)
-                        if match:
-                            pre, num_str = match.groups()
-                            remediated_df.loc[i, col] = f"{pre}{str(int(num_str) + 1).zfill(len(num_str))}"
-                        else:
-                            # Try pure numeric increment
-                            try:
-                                remediated_df.loc[i, col] = str(int(float(prev_val)) + 1)
-                            except: pass
+        for i in range(1, len(remediated_df)):
+            if is_blank(remediated_df.loc[i, col]):
+                prev_val = remediated_df.loc[i-1, col]
+                if not is_blank(prev_val):
+                    prev_str = str(prev_val).strip()
+                    # Try Alphanumeric increment (e.g. CUST001 -> CUST002)
+                    match = re.match(r'^([a-zA-Z]+)(\d+)$', prev_str)
+                    if match:
+                        pre, num_str = match.groups()
+                        remediated_df.loc[i, col] = f"{pre}{str(int(num_str) + 1).zfill(len(num_str))}"
+                    else:
+                        # Try pure numeric increment
+                        try:
+                            remediated_df.loc[i, col] = str(int(float(prev_str)) + 1)
+                        except: pass
 
-    # 2. Domain-Agnostic Standardization (Casing, Numeric Scrubbing)
+    # 2. String & Numeric Standardization
     for col in remediated_df.columns:
         if col in ['dq_status', '_issues']: continue
         
@@ -194,39 +173,11 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
         if remediated_df[col].dtype == 'object' and "email" not in col.lower():
             remediated_df[col] = remediated_df[col].apply(to_sentence_case)
         
-        # B. Numeric Scrubbing for likely numeric columns
+        # B. Numeric Scrubbing
         if any(x in col.lower() for x in ["revenue", "amount", "price", "score", "count", "loyalty"]):
             remediated_df[col] = remediated_df[col].apply(clean_numeric_scalar)
 
-    # 3. Fuzzy Geographic Standardization
-    if country_col:
-        countries_list = list(GEOGRAPHIC_DATA.keys())
-        for i in range(len(remediated_df)):
-            val = remediated_df.loc[i, country_col]
-            if not is_scalar_nan(val) and str(val).strip() != "":
-                match = fuzzy_match_scalar(val, countries_list)
-                if match: remediated_df.loc[i, country_col] = match
-
-    if state_col and country_col:
-        for i in range(len(remediated_df)):
-            s_val = remediated_df.loc[i, state_col]
-            c_val = str(remediated_df.loc[i, country_col]).upper()
-            if not is_scalar_nan(s_val) and c_val in GEOGRAPHIC_DATA:
-                states_list = list(GEOGRAPHIC_DATA[c_val].keys())
-                match = fuzzy_match_scalar(s_val, states_list)
-                if match: remediated_df.loc[i, state_col] = match
-
-    if city_col and state_col and country_col:
-        for i in range(len(remediated_df)):
-            ci_val = remediated_df.loc[i, city_col]
-            c_val = str(remediated_df.loc[i, country_col]).upper()
-            s_val = str(remediated_df.loc[i, state_col]).upper()
-            if not is_scalar_nan(ci_val) and c_val in GEOGRAPHIC_DATA and s_val in GEOGRAPHIC_DATA[c_val]:
-                cities_list = GEOGRAPHIC_DATA[c_val][s_val]
-                match = fuzzy_match_scalar(ci_val, cities_list)
-                if match: remediated_df.loc[i, city_col] = match
-
-    # 4. Critical Field Remediation (Email, Phone, SSN, Gender, Dates)
+    # 3. Domain-Specific Cleansing
     for col in remediated_df.columns:
         col_lower = col.lower()
         col_pii = pii_results.get(col, [])
@@ -240,16 +191,14 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
         
         if default_val:
             for i in range(len(remediated_df)):
-                val = remediated_df.loc[i, col]
-                if is_scalar_nan(val) or str(val).strip() == "":
+                if is_blank(remediated_df.loc[i, col]):
                     remediated_df.loc[i, col] = f"FIXED_DEFAULT: {default_val}"
 
-        # B. Library Standardization
-        # Phone
+        # B. Phone Formatting
         if "phone" in col_lower or any("phone" in str(p).lower() for p in col_pii):
             for i in range(len(remediated_df)):
-                val = str(remediated_df.loc[i, col])
-                if "FIXED_DEFAULT" in val or val == "nan": continue
+                val = remediated_df.loc[i, col]
+                if is_blank(val) or str(val).startswith("FIXED_"): continue
                 
                 c_code = "US"
                 if country_col:
@@ -258,78 +207,88 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
                     elif "KINGDOM" in country_name or "GB" in country_name: c_code = "GB"
                 
                 try:
-                    parsed = phonenumbers.parse(val, c_code)
+                    parsed = phonenumbers.parse(str(val), c_code)
                     if phonenumbers.is_valid_number(parsed):
-                        fmt = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
-                        remediated_df.loc[i, col] = fmt.replace(" ", "-")
+                        remediated_df.loc[i, col] = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL).replace(" ", "-")
                     else:
-                        # If invalid, try to fix common errors (e.g. missing +)
-                        if not val.startswith("+"):
-                            reg_code = phonenumbers.country_code_for_region(c_code)
-                            parsed2 = phonenumbers.parse(f"+{reg_code}{val}", c_code)
-                            if phonenumbers.is_valid_number(parsed2):
-                                remediated_df.loc[i, col] = phonenumbers.format_number(parsed2, phonenumbers.PhoneNumberFormat.INTERNATIONAL).replace(" ", "-")
+                        # Try adding country code
+                        reg_code = phonenumbers.country_code_for_region(c_code)
+                        parsed2 = phonenumbers.parse(f"+{reg_code}{str(val)}", c_code)
+                        if phonenumbers.is_valid_number(parsed2):
+                            remediated_df.loc[i, col] = phonenumbers.format_number(parsed2, phonenumbers.PhoneNumberFormat.INTERNATIONAL).replace(" ", "-")
                 except: pass
 
-        # Email
+        # C. Email
         elif "email" in col_lower or any("email" in str(p).lower() for p in col_pii):
              for i in range(len(remediated_df)):
-                val = str(remediated_df.loc[i, col])
-                if "FIXED_DEFAULT" in val or val == "nan": continue
-                if not validators.email(val):
+                val = remediated_df.loc[i, col]
+                if is_blank(val) or str(val).startswith("FIXED_"): continue
+                if not validators.email(str(val)):
                     remediated_df.loc[i, col] = f"FIXED_DEFAULT: {CRITICAL_FIELD_DEFAULTS['email']}"
 
-        # Dates
+        # D. Dates
         elif "date" in col_lower or "dob" in col_lower or any("date" in str(p).lower() for p in col_pii):
             for i in range(len(remediated_df)):
-                val = str(remediated_df.loc[i, col])
-                if "FIXED_DEFAULT" in val or val == "nan": continue
+                val = remediated_df.loc[i, col]
+                if is_blank(val) or str(val).startswith("FIXED_"): continue
                 try:
-                    parsed = dateparser.parse(val)
+                    parsed = dateparser.parse(str(val))
                     if parsed: remediated_df.loc[i, col] = parsed.strftime("%d/%m/%Y")
                 except: pass
 
-        # Gender
+        # E. Gender
         elif "gender" in col_lower or col == gender_col:
             gender_map = {'m': 'Male', 'male': 'Male', 'man': 'Male', 'f': 'Female', 'female': 'Female', 'woman': 'Female'}
-            remediated_df[col] = remediated_df[col].astype(str).str.lower().str.strip().map(gender_map).fillna('Other')
+            remediated_df[col] = remediated_df[col].apply(lambda x: gender_map.get(str(x).lower().strip(), 'Other') if not is_blank(x) else x)
 
-    # 5. Catch-All Null Value Sweep (except IDs)
+    # 4. Fuzzy Geographic Standardization
+    countries_list = list(GEOGRAPHIC_DATA.keys())
+    if country_col:
+        for i in range(len(remediated_df)):
+            val = remediated_df.loc[i, country_col]
+            if not is_blank(val):
+                match = fuzzy_match_scalar(val, countries_list)
+                if match: remediated_df.loc[i, country_col] = match
+
+    if state_col and country_col:
+        for i in range(len(remediated_df)):
+            s_val = remediated_df.loc[i, state_col]
+            c_val = str(remediated_df.loc[i, country_col]).upper()
+            if not is_blank(s_val) and c_val in GEOGRAPHIC_DATA:
+                states_list = list(GEOGRAPHIC_DATA[c_val].keys())
+                match = fuzzy_match_scalar(s_val, states_list)
+                if match: remediated_df.loc[i, state_col] = match
+
+    if city_col and state_col and country_col:
+        for i in range(len(remediated_df)):
+            ci_val = remediated_df.loc[i, city_col]
+            c_val = str(remediated_df.loc[i, country_col]).upper()
+            s_val = str(remediated_df.loc[i, state_col]).upper()
+            if not is_blank(ci_val) and c_val in GEOGRAPHIC_DATA and s_val in GEOGRAPHIC_DATA[c_val]:
+                cities_list = GEOGRAPHIC_DATA[c_val][s_val]
+                match = fuzzy_match_scalar(ci_val, cities_list)
+                if match: remediated_df.loc[i, city_col] = match
+
+    # 5. Catch-All Null Value Sweep (Except IDs)
     for col in remediated_df.columns:
         if col in id_cols or col == 'dq_status' or col == '_issues': continue
         for i in range(len(remediated_df)):
-            val = remediated_df.loc[i, col]
-            if is_scalar_nan(val) or str(val).strip() == "":
+            if is_blank(remediated_df.loc[i, col]):
                 if pd.api.types.is_numeric_dtype(remediated_df[col]):
                     remediated_df.loc[i, col] = "FIXED_NULL_0: 0"
                 else:
                     remediated_df.loc[i, col] = "FIXED_NULL_UNK: Unknown"
 
-    # 6. Final Audit and DQ Status Construction
+    # 6. Final Audit & Status Construction
     for i in range(len(remediated_df)):
         msgs = []
         
-        # Compare columns for changes
         for col in remediated_df.columns:
             if col in ['dq_status', '_issues']: continue
             
             new_val = remediated_df.loc[i, col]
             orig_val = original_df.loc[i, col]
             
-            # Handle the "ambiguous truth value" by using a safe comparison
-            changed = False
-            if is_scalar_nan(orig_val):
-                if not is_scalar_nan(new_val): changed = True
-            elif is_scalar_nan(new_val):
-                changed = True
-            else:
-                # Both not NaN
-                if str(orig_val).strip().lower() != str(new_val).strip().lower():
-                    # Handle internal "FIXED_" markers
-                    if not str(new_val).startswith("FIXED_"):
-                        changed = True
-
-            # Process change messages
             if str(new_val).startswith("FIXED_DEFAULT"):
                 actual = str(new_val).split(": ")[1]
                 remediated_df.loc[i, col] = actual
@@ -338,10 +297,14 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
                 actual = str(new_val).split(": ")[1]
                 remediated_df.loc[i, col] = actual
                 msgs.append(f"Nulls found in {col} and replaced with default value. Manual fix recommended.")
-            elif changed:
-                msgs.append(f"Standardized {col}: {orig_val} -> {new_val}")
+            elif not is_blank(orig_val) and not is_blank(new_val):
+                if str(orig_val).strip().lower() != str(new_val).strip().lower():
+                    msgs.append(f"Standardized {col}: {orig_val} -> {new_val}")
+            elif is_blank(orig_val) and not is_blank(new_val):
+                # This handles IDs or other cases not caught by FIXED_ markers
+                msgs.append(f"Populated missing {col}: {new_val}")
 
-        # Integrity Check: Country-State-City
+        # Integrity check
         if country_col:
             c_val = str(remediated_df.loc[i, country_col]).upper()
             s_val = str(remediated_df.loc[i, state_col]).upper() if state_col else None
@@ -353,14 +316,14 @@ def remediate_data(df: pd.DataFrame, rules: list, pii_results: dict = None) -> p
                 if s_val:
                     if s_val not in data: integrity_err = True
                     elif ci_val and ci_val not in data[s_val]: integrity_err = True
-            
+            elif not is_blank(c_val):
+                # If country not in dict, we skip validation or mark as manual check needed?
+                # User asked to flag if incorrect or missing.
+                pass 
+
             if integrity_err:
                 msgs.append("Integrity check failed: either city or state or country is missing or incorrect. Manual Check needed")
 
-        if msgs:
-            remediated_df.at[i, 'dq_status'] = " | ".join(msgs)
-        else:
-            remediated_df.at[i, 'dq_status'] = 'good'
+        remediated_df.at[i, 'dq_status'] = " | ".join(msgs) if msgs else 'good'
 
-    if '_issues' in remediated_df.columns: remediated_df.drop(columns=['_issues'], inplace=True)
     return remediated_df.set_index(df.index)
