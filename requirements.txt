@@ -8,7 +8,6 @@ pytest
 python-stdnum
 phonenumbers
 validators
-pdfkit
 ydata-profiling
 matplotlib
 numpy

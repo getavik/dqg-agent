@@ -1,23 +1,26 @@
 import pandas as pd
-from fpdf import FPDF, HTMLMixin
+from fpdf import FPDF
 import os
 import tempfile
 import matplotlib.pyplot as plt
 from datetime import datetime
-import pdfkit
-
-# Path to wkhtmltopdf executable
-path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-
-class PDF(FPDF, HTMLMixin):
-    pass
 
 def generate_profiling_pdf_from_html(html_string: str) -> bytes:
     """
-    Generates a PDF from an HTML string using pdfkit.
+    Generates a simple PDF indicating that the full report is an HTML file.
+    fpdf2's HTML support is limited, so we guide the user to the better format.
     """
-    return pdfkit.from_string(html_string, False, configuration=config)
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("helvetica", 'B', 16)
+    pdf.cell(0, 10, "Data Profiling Report", 0, 1, 'C')
+    pdf.ln(10)
+    pdf.set_font("helvetica", '', 12)
+    pdf.multi_cell(0, 10, 
+        "This is a simplified PDF summary. For the full interactive experience, please open the "
+        "HTML version of the report, which is displayed in the 'Profiling' tab of the application."
+    )
+    return pdf.output()
 
 def format_profiling_summary_for_excel(summary: dict) -> pd.DataFrame:
     """
