@@ -12,3 +12,6 @@ pdfkit
 ydata-profiling
 matplotlib
 numpy
+dateparser
+pycountry
+rapidfuzz

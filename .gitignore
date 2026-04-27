@@ -34,6 +34,7 @@ ENV/
 *.swo
 
 # Project Specific
+.pytest_cache/
 output/
 data/
 *.csv

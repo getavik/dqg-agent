@@ -46,7 +46,7 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
                - SANITY CHECK: Before flagging, cross-reference the PII entity type with the column name. For example, if 'DATE_TIME' is detected in a column named 'refresh_rate' or 'frequency', it is likely a false positive and should NOT be flagged as a PII violation.
             
             2. SDPI (Sensitive Data Protection for AI): Flag any data that could leak proprietary logic, internal system paths, or trade secrets.
-               - Expectation: Use 'expect_column_values_to_not_be_null' or 'expect_column_values_to_match_regex'.
+               - Expectation: Use 'expect_column_values_to_be_masked' or 'expect_column_values_to_match_regex' with a masking/cleansing intent.
                - Severity: High.
                - Reason: Prevention of Intellectual Property loss and Model Inversion attacks.
 
@@ -71,7 +71,7 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
             Requirements:
             1. Return ONLY a JSON object with a key "rules" containing a list of rule objects.
             2. Columns: "column", "expectation", "severity", "reason", "dimension".
-            3. Dimensions: "Accuracy", "Completeness", "Consistency", "Timeliness", "Uniqueness", "Validity", "PII Disclosure", "SDPI Compliance".
+            3. Dimensions: "Accuracy", "Completeness", "Consistency", "Timeliness", "Uniqueness", "Validity", "PII Disclosure (OWASP)", "SDPI Compliance", "Data Completeness & Bias (OWASP)".
             
             Explicitly flag verified PII violations as 'Critical' rules. Use your architectural judgement to dismiss obvious false positives where technical detection (e.g. Presidio) conflicts with business context (column names).
             """
@@ -99,30 +99,133 @@ def analyze_intent(intent: str, profile_summary: dict, pii_results: dict, api_ke
             if "not_be_null" in exp:
                 rule["dimension"] = "Completeness"
             elif "match_regex" in exp:
-                rule["dimension"] = "Conformity"
-            elif "between" in exp:
                 rule["dimension"] = "Validity"
+            elif "between" in exp:
+                rule["dimension"] = "Accuracy"
             elif "unique" in exp:
                 rule["dimension"] = "Uniqueness"
             else:
-                rule["dimension"] = "Accuracy"
+                rule["dimension"] = "Consistency"
         key = (rule["column"], rule["expectation"])
         if key not in existing_rules:
             rules.append(rule)
             existing_rules.add(key)
 
-    if "marketing" in intent.lower():
-        add_rule({"column": "email", "expectation": "expect_column_values_to_not_be_null", "severity": "High", "reason": "Email is critical for marketing campaigns.", "dimension": "Completeness"})
-    if "financial" in intent.lower():
-        add_rule({"column": "revenue", "expectation": "expect_column_values_to_be_between", "min_value": 0, "severity": "High", "reason": "Revenue cannot be negative for reporting.", "dimension": "Validity"})
+    # 1. Dimension: Completeness (Missing Values)
     for col, stats in profile_summary["columns"].items():
-        if stats["p_missing"] > 0:
-             add_rule({"column": col, "expectation": "expect_column_values_to_not_be_null", "severity": "Medium", "reason": f"Column {col} has missing values.", "dimension": "Completeness"})
-        if "phone" in col.lower():
-             add_rule({"column": col, "expectation": "expect_column_values_to_match_regex", "regex": r"^\+\d{1,3}-\d{1,4}-\d{3}-\d{4}((x|ext)\d{1,5})?$", "severity": "High", "reason": f"Column {col} contains invalid phone number formats.", "dimension": "Conformity"})
-    for col, entities in pii_results.items():
-        if entities:
-             add_rule({"column": col, "expectation": "expect_column_values_to_match_regex", "severity": "Critical", "reason": f"PII Detected: {', '.join(entities)}. Ensure proper masking.", "dimension": "Confidentiality"})
+        if stats.get("p_missing", 0) > 0:
+            severity = "High" if stats["p_missing"] > 0.5 else "Medium"
+            add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_not_be_null",
+                "severity": severity,
+                "reason": f"Column {col} has {stats['p_missing']*100:.1f}% missing values.",
+                "dimension": "Completeness"
+            })
+
+    # 2. Dimension: Validity & Conformity (Format & Types)
+    for col, stats in profile_summary["columns"].items():
+        col_lower = col.lower()
+        if "phone" in col_lower:
+            add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_match_regex",
+                "regex": r"^\+\d{1,3}-\d{1,4}-\d{3}-\d{4}((x|ext)\d{1,5})?$",
+                "severity": "High",
+                "reason": f"Standardize {col} to international format.",
+                "dimension": "Validity"
+            })
+        elif "email" in col_lower:
+            add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_match_regex",
+                "regex": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+                "severity": "High",
+                "reason": f"Ensure {col} follows valid email format.",
+                "dimension": "Validity"
+            })
+        elif "ssn" in col_lower:
+             add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_match_regex",
+                "regex": r"^\d{3}-\d{2}-\d{4}$",
+                "severity": "Critical",
+                "reason": f"Standardize {col} to XXX-XX-XXXX format.",
+                "dimension": "Validity"
+            })
+
+    # 3. Dimension: Accuracy (Range & Outliers)
+    for col, stats in profile_summary["columns"].items():
+        if "min" in stats and "max" in stats:
+            if pd.api.types.is_numeric_dtype(pd.Series([stats["min"]])):
+                if "revenue" in col.lower() or "amount" in col.lower() or "price" in col.lower():
+                    add_rule({
+                        "column": col,
+                        "expectation": "expect_column_values_to_be_between",
+                        "min_value": 0,
+                        "severity": "High",
+                        "reason": f"{col} should not be negative.",
+                        "dimension": "Accuracy"
+                    })
+
+    # 4. Dimension: Uniqueness (Identifiers)
+    for col, stats in profile_summary["columns"].items():
+        col_lower = col.lower()
+        if any(x in col_lower for x in ["id", "pk", "key", "code"]):
+            n_rows = profile_summary.get("n_rows", 1)
+            if stats.get("n_distinct") == n_rows:
+                add_rule({
+                    "column": col,
+                    "expectation": "expect_column_values_to_be_unique",
+                    "severity": "High",
+                    "reason": f"{col} appears to be a unique identifier.",
+                    "dimension": "Uniqueness"
+                })
+
+    # 5. Dimension: Timeliness (Dates)
+    for col, stats in profile_summary["columns"].items():
+        if stats.get("type") == "DateTime" or "date" in col.lower():
+            add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_be_in_past", # Conceptual
+                "severity": "Medium",
+                "reason": f"Ensure {col} contains historical/current dates only.",
+                "dimension": "Timeliness"
+            })
+
+    # 6. Dimension: Consistency (Pattern matching for categories)
+    for col, stats in profile_summary["columns"].items():
+        if stats.get("n_distinct", 0) < 10 and stats.get("type") == "Categorical":
+            add_rule({
+                "column": col,
+                "expectation": "expect_column_values_to_be_in_set", # Conceptual
+                "severity": "Medium",
+                "reason": f"Standardize {col} values to a consistent set.",
+                "dimension": "Consistency"
+            })
+    
+    if "marketing" in intent.lower():
+        if "email" in profile_summary["columns"]:
+            add_rule({
+                "column": "email",
+                "expectation": "expect_column_values_to_not_be_null",
+                "severity": "High",
+                "reason": "Critical for cross-channel consistency.",
+                "dimension": "Consistency"
+            })
+
+    # PII Checks - FIX BUG: ignore "error" key in pii_results
+    if isinstance(pii_results, dict) and "error" not in pii_results:
+        for col, entities in pii_results.items():
+            if entities:
+                 add_rule({
+                    "column": col,
+                    "expectation": "expect_column_values_to_match_regex",
+                    "severity": "Critical",
+                    "reason": f"PII Detected ({', '.join(entities)}). Requires masking.",
+                    "dimension": "Confidentiality"
+                })
+
     return {"rules": rules}, None
 
 def generate_remediation(failed_validations: list) -> dict:

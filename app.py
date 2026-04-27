@@ -33,8 +33,8 @@ def create_dq_improvement_chart(before_failures, after_failures):
 # --- CONFIGURATION ---
 st.set_page_config(
     layout="wide", 
-    page_title="Governance Bridge | Smart Data Agent",
-    page_icon="🛡️"
+    page_title="Smart Data Analyst",
+    page_icon="🧠"
 )
 
 # --- INITIALIZE SESSION STATE ---
@@ -55,20 +55,26 @@ MODEL_PRICING = {
 # --- MATERIAL DESIGN 3 STYLING ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500&family=Inter:wght@200&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Inter', sans-serif;
+        font-weight: 200;
+    }
+
+    h1, h2, h3, h4, h5, h6, .main-header, .stTabs [data-baseweb="tab"] {
+        font-family: 'EB Garamond', serif;
+        font-weight: 500;
     }
 
     /* Top Navigation/Header - Softened gradient */
     .main-header {
-        background: linear-gradient(135deg, #6750A4 0%, #4A3A73 100%);
+        background: linear-gradient(135deg, #4A3A73 0%, #3C2D5E 100%);
         color: #FFFFFF;
-        padding: 1.5rem 2rem;
-        border-radius: 0 0 16px 16px;
+        padding: 2rem 2.5rem;
+        border-radius: 0 0 18px 18px;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.18);
     }
 
     /* Tabs Styling - Let Streamlit handle base colors to preserve contrast */
@@ -120,8 +126,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
     <div class="main-header">
-        <h1 style='margin:0; font-size: 2rem;'>🛡️ Governance Bridge</h1>
-        <p style='margin:0; opacity: 0.9;'>Autonomous Data Quality & Governance Agent</p>
+        <h1 style='font-family: "EB Garamond", serif; font-weight: 500; margin:0; font-size: 2.5rem;'>🧠 Smart Data Analyst</h1>
+        <p style='font-family: "Inter", sans-serif; font-weight: 200; margin:0; opacity: 0.9;'>Autonomous Data Quality & Governance Agent</p>
     </div>
 """, unsafe_allow_html=True)
 
